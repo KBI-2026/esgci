@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ESGCI — Vérification d'Attestation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d1b8e;--bg2:#0a1470;
+  --card:#ffffff;--paper:#fffef8;
+  --navy:#0d1b8e;--gold:#c9a227;
+  --text:#18152e;--text2:#55527a;--text3:#9b98b8;
+  --ok:#1a7a4a;--ok-bg:#edfaf3;--ok-b:#b6e8ce;
+  --err:#b91c1c;--err-bg:#fef2f2;--err-b:#fecaca;
+  --border:rgba(0,0,0,.08);
+}
+[data-theme="dark"]{
+  --card:#111d40;--paper:#131d3e;
+  --text:#e5e2f5;--text2:#8885a8;--text3:#504e6a;
+  --ok:#22c55e;--ok-bg:rgba(34,197,94,.08);--ok-b:rgba(34,197,94,.25);
+  --err:#f87171;--err-bg:rgba(248,113,113,.08);--err-b:rgba(248,113,113,.25);
+  --border:rgba(255,255,255,.07);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:'DM Sans',system-ui,sans-serif;
+  min-height:100vh;
+  background:linear-gradient(145deg,#0a1470 0%,#0d1b8e 40%,#1428b0 100%);
+  display:flex;flex-direction:column;align-items:center;
+  padding:32px 16px 60px;
+}
+
+/* watermark */
+body::before{
+  content:'ESGCI';
+  position:fixed;bottom:-40px;right:-20px;
+  font-family:'Playfair Display',serif;
+  font-size:220px;font-weight:700;
+  color:rgba(255,255,255,.03);
+  pointer-events:none;z-index:0;
+  letter-spacing:-10px;
+}
+
+/* header */
+.vhdr{
+  display:flex;align-items:center;gap:14px;margin-bottom:32px;
+  position:relative;z-index:1;
+}
+.vlogo{
+  font-family:'Playfair Display',serif;font-size:28px;font-weight:700;
+  color:#fff;letter-spacing:-.5px;line-height:1;position:relative;
+}
+.vlogo::after{
+  content:'';position:absolute;bottom:-4px;left:0;right:0;
+  height:2px;background:var(--gold);
+}
+.vsub{font-size:12px;color:rgba(255,255,255,.55);letter-spacing:.2px}
+
+/* card */
+.vcard{
+  background:var(--card);border-radius:16px;
+  box-shadow:0 32px 80px rgba(0,0,0,.28);
+  width:100%;max-width:580px;overflow:hidden;
+  position:relative;z-index:1;
+  animation:rise .5s cubic-bezier(.16,1,.3,1);
+}
+@keyframes rise{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+
+/* gold top stripe */
+.vtop{height:3px;background:linear-gradient(90deg,var(--gold),#e8c854,var(--gold))}
+
+/* status badge */
+.vstatus{
+  display:flex;flex-direction:column;align-items:center;
+  padding:32px 28px 24px;
+  border-bottom:1px solid var(--border);
+}
+.badge{
+  width:72px;height:72px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:32px;margin-bottom:14px;
+  animation:pop .4s .2s cubic-bezier(.34,1.56,.64,1) both;
+}
+@keyframes pop{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+.badge.ok{background:var(--ok-bg);border:2px solid var(--ok-b)}
+.badge.err{background:var(--err-bg);border:2px solid var(--err-b)}
+
+.vstatus-title{
+  font-family:'Playfair Display',serif;
+  font-size:22px;font-weight:700;
+  margin-bottom:5px;
+}
+.vstatus-title.ok{color:var(--ok)}
+.vstatus-title.err{color:var(--err)}
+.vstatus-sub{font-size:12.5px;color:var(--text2);text-align:center;line-height:1.6}
+
+/* details grid */
+.vbody{padding:26px 28px 28px}
+
+.vsection{
+  font-size:9.5px;font-weight:600;letter-spacing:1.3px;
+  text-transform:uppercase;color:var(--gold);
+  margin-bottom:12px;
+  display:flex;align-items:center;gap:8px;
+}
+.vsection::after{content:'';flex:1;height:1px;background:rgba(201,162,39,.18)}
+
+.vgrid{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:1px;background:var(--border);
+  border:1px solid var(--border);border-radius:10px;
+  overflow:hidden;margin-bottom:24px;
+}
+.vcell{
+  background:var(--card);padding:11px 14px;
+}
+.vcell .lbl{font-size:9.5px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:3px}
+.vcell .val{font-size:13px;font-weight:500;color:var(--text)}
+.vcell .val.mono{font-family:'DM Mono',monospace;font-size:12px;color:var(--navy)}
+[data-theme="dark"] .vcell .val.mono{color:#6080ff}
+.vcell.full{grid-column:1/-1}
+
+/* hash row */
+.vhash{
+  background:var(--border);border-radius:8px;padding:10px 14px;
+  margin-bottom:24px;
+  font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);
+  word-break:break-all;line-height:1.6;
+}
+.vhash .hl{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);display:block;margin-bottom:3px}
+
+/* actions */
+.vactions{display:flex;gap:10px;flex-wrap:wrap}
+.vbtn{
+  padding:10px 20px;border-radius:9px;border:1.5px solid var(--border);
+  background:var(--card);color:var(--text2);
+  font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;
+  cursor:pointer;transition:all .2s;flex:1;min-width:120px;
+  display:flex;align-items:center;justify-content:center;gap:7px;
+}
+.vbtn:hover{border-color:var(--navy);color:var(--navy)}
+.vbtn.primary{background:var(--navy);color:#fff;border-color:var(--navy)}
+.vbtn.primary:hover{background:#1428b0;box-shadow:0 4px 14px rgba(13,27,142,.28)}
+
+/* error / invalid */
+.verr-card{
+  background:var(--card);border-radius:16px;
+  box-shadow:0 32px 80px rgba(0,0,0,.28);
+  width:100%;max-width:480px;padding:48px 36px;
+  text-align:center;position:relative;z-index:1;
+  animation:rise .5s cubic-bezier(.16,1,.3,1);
+}
+.verr-icon{font-size:52px;margin-bottom:16px;opacity:.9}
+.verr-title{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--err);margin-bottom:8px}
+.verr-sub{font-size:13px;color:var(--text2);line-height:1.7}
+
+/* loading */
+.vloading{
+  color:#fff;font-size:15px;display:flex;align-items:center;gap:10px;
+  position:relative;z-index:1;
+}
+.spinner{
+  width:20px;height:20px;border:2px solid rgba(255,255,255,.3);
+  border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* footer */
+.vfooter{
+  margin-top:24px;font-size:11px;color:rgba(255,255,255,.35);
+  text-align:center;position:relative;z-index:1;
+}
+
+/* dark toggle */
+.dark-btn{
+  position:fixed;bottom:20px;right:20px;z-index:100;
+  width:42px;height:42px;border-radius:50%;
+  background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);
+  cursor:pointer;font-size:18px;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .2s;
+}
+.dark-btn:hover{background:rgba(255,255,255,.2)}
+
+@media(max-width:600px){
+  .vgrid{grid-template-columns:1fr}
+  .vcell.full{grid-column:1}
+}
+</style>
+</head>
+<body>
+
+<div class="vhdr">
+  <div>
+    <div class="vlogo">ESGCI</div>
+    <div class="vsub">Portail de vérification d'attestations</div>
+  </div>
+</div>
+
+<div id="root">
+  <div class="vloading"><div class="spinner"></div>Vérification en cours…</div>
+</div>
+
+<div class="vfooter">
+  ESGCI — 10 rue Sextius Michel, 75015 Paris &nbsp;·&nbsp; www.esgci.com
+</div>
+
+<button class="dark-btn" onclick="toggleDark()" title="Mode sombre">🌙</button>
+
+<script>
+'use strict';
+
+/* ── SAME HASH AS INDEX.HTML ── */
+function fnv32(s){
+  let h=0x811c9dc5;
+  for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=(Math.imul(h,0x01000193))>>>0}
+  return h.toString(16).padStart(8,'0').toUpperCase();
+}
+function computeHash(ref,nom,prenom,numEtu,programme,annee){
+  const s=`ESGCI|${ref}|${nom.toUpperCase()}|${prenom.toUpperCase()}|${numEtu}|${programme}|${annee}`;
+  return fnv32(s)+fnv32([...s].reverse().join('')+ref);
+}
+
+function dec64(str){
+  try{return JSON.parse(decodeURIComponent(escape(atob(str))))}catch{return null}
+}
+
+function fmtD(s){if(!s)return'—';const[y,m,d]=s.split('-');return`${d}/${m}/${y}`}
+
+/* ── DARK MODE ── */
+function toggleDark(){
+  document.documentElement.setAttribute('data-theme',
+    document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark');
+}
+
+/* ── VERIFY ── */
+function verify(){
+  const root=document.getElementById('root');
+  const params=new URLSearchParams(window.location.search);
+  const raw=params.get('d');
+
+  if(!raw){
+    root.innerHTML=`
+      <div class="verr-card">
+        <div class="verr-icon">🔗</div>
+        <div class="verr-title">Lien invalide</div>
+        <div class="verr-sub">Aucune donnée de vérification trouvée dans l'URL.<br>Scannez à nouveau le QR code de l'attestation.</div>
+      </div>`;
+    return;
+  }
+
+  const p=dec64(raw);
+  if(!p||!p.r||!p.n||!p.p||!p.i||!p.g||!p.a||!p.h){
+    root.innerHTML=`
+      <div class="verr-card">
+        <div class="verr-icon">⚠️</div>
+        <div class="verr-title">Données corrompues</div>
+        <div class="verr-sub">Les données de l'attestation sont illisibles ou incomplètes.<br>Ce document peut avoir été altéré.</div>
+      </div>`;
+    return;
+  }
+
+  const recomputed=computeHash(p.r,p.n,p.p,p.i,p.g,p.a);
+  const valid=recomputed===p.h;
+
+  const verifiedAt=new Date().toLocaleString('fr-FR',{dateStyle:'long',timeStyle:'short'});
+
+  if(valid){
+    root.innerHTML=`
+      <div class="vcard">
+        <div class="vtop"></div>
+        <div class="vstatus">
+          <div class="badge ok">✓</div>
+          <div class="vstatus-title ok">Attestation authentique</div>
+          <div class="vstatus-sub">Ce document est authentique et a été émis par l'ESGCI.<br>Signature numérique vérifiée avec succès.</div>
+        </div>
+        <div class="vbody">
+          <div class="vsection">Informations de l'étudiant</div>
+          <div class="vgrid">
+            <div class="vcell">
+              <div class="lbl">Nom complet</div>
+              <div class="val">${p.n.toUpperCase()} ${p.p}</div>
+            </div>
+            <div class="vcell">
+              <div class="lbl">N° Étudiant</div>
+              <div class="val mono">${p.i}</div>
+            </div>
+            <div class="vcell full">
+              <div class="lbl">Programme</div>
+              <div class="val">${p.g}</div>
+            </div>
+            <div class="vcell">
+              <div class="lbl">Année académique</div>
+              <div class="val">${p.a}</div>
+            </div>
+            <div class="vcell">
+              <div class="lbl">Date d'émission</div>
+              <div class="val">${p.dt||'—'}</div>
+            </div>
+          </div>
+          <div class="vsection">Référence</div>
+          <div class="vhash">
+            <span class="hl">Identifiant d'attestation</span>
+            <span class="val mono" style="color:var(--navy);font-size:12px">${p.r}</span>
+          </div>
+          <div class="vhash" style="margin-top:-14px">
+            <span class="hl">Empreinte numérique (hash)</span>
+            ${p.h}
+          </div>
+          <div class="vsection">Vérification</div>
+          <div class="vgrid" style="margin-bottom:20px">
+            <div class="vcell">
+              <div class="lbl">Statut</div>
+              <div class="val" style="color:var(--ok);font-weight:600">✓ Valide</div>
+            </div>
+            <div class="vcell">
+              <div class="lbl">Vérifié le</div>
+              <div class="val">${verifiedAt}</div>
+            </div>
+          </div>
+          <div class="vactions">
+            <button class="vbtn primary" onclick="window.print()">🖨 Imprimer</button>
+            <button class="vbtn" onclick="window.close()">← Fermer</button>
+          </div>
+        </div>
+      </div>`;
+  } else {
+    root.innerHTML=`
+      <div class="vcard">
+        <div class="vtop" style="background:linear-gradient(90deg,#dc2626,#ef4444,#dc2626)"></div>
+        <div class="vstatus">
+          <div class="badge err">✗</div>
+          <div class="vstatus-title err">Attestation non vérifiée</div>
+          <div class="vstatus-sub">La signature numérique ne correspond pas aux données.<br>Ce document peut avoir été modifié ou falsifié.</div>
+        </div>
+        <div class="vbody">
+          <div class="vsection">Données présentées</div>
+          <div class="vgrid" style="margin-bottom:20px">
+            <div class="vcell">
+              <div class="lbl">Référence</div>
+              <div class="val mono">${p.r}</div>
+            </div>
+            <div class="vcell">
+              <div class="lbl">N° Étudiant</div>
+              <div class="val mono">${p.i}</div>
+            </div>
+          </div>
+          <div class="vstatus-sub" style="margin-bottom:20px;color:#dc2626;font-weight:600">
+            ⚠ Contactez l'ESGCI pour authentifier ce document : scolarite@esgci.com
+          </div>
+          <div class="vactions">
+            <button class="vbtn primary" style="background:#dc2626;border-color:#dc2626" onclick="window.print()">🖨 Imprimer ce résultat</button>
+            <button class="vbtn" onclick="window.close()">← Fermer</button>
+          </div>
+        </div>
+      </div>`;
+  }
+}
+
+verify();
+</script>
+</body>
+</html>

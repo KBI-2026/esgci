@@ -1,0 +1,10 @@
+node_modules/
+test-results/
+test-results.json
+playwright-report/
+package-lock.json
+package.json
+playwright.config.js
+esgci.test.js
+build-qrcode.js
+_qrentry.js

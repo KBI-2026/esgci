@@ -88,6 +88,55 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
   transition:transform .22s,background .22s;
 }
 [data-theme="dark"] .dark-btn::before{transform:translateX(20px);background:var(--gold)}
+/* ── GATE ── */
+#gate{
+  position:fixed;inset:0;z-index:9999;
+  background:linear-gradient(145deg,#0a1470 0%,#0d1b8e 40%,#1428b0 100%);
+  display:flex;align-items:center;justify-content:center;
+  transition:opacity .35s,visibility .35s;
+}
+#gate.out{opacity:0;visibility:hidden;pointer-events:none;}
+#gate::before{
+  content:'ESGCI';position:fixed;bottom:-40px;right:-20px;
+  font-family:'Playfair Display',serif;font-size:220px;font-weight:700;
+  color:rgba(255,255,255,.03);pointer-events:none;letter-spacing:-10px;
+}
+.gate-card{
+  background:#fff;border-radius:16px;padding:44px 40px 36px;
+  width:100%;max-width:360px;text-align:center;position:relative;z-index:1;
+  box-shadow:0 32px 80px rgba(0,0,0,.32);
+  animation:rise .45s cubic-bezier(.16,1,.3,1);
+}
+.gate-stripe{height:3px;background:linear-gradient(90deg,#c9a227,#e8c854,#c9a227);
+  position:absolute;top:0;left:0;right:0;border-radius:16px 16px 0 0;}
+.gate-logo{
+  font-family:'Playfair Display',serif;font-size:30px;font-weight:700;
+  color:#0d1b8e;letter-spacing:-.5px;position:relative;display:inline-block;
+}
+.gate-logo::after{content:'';position:absolute;bottom:-4px;left:0;right:0;height:2px;background:#c9a227;}
+.gate-sub{font-size:11.5px;color:#55527a;margin:16px 0 26px;line-height:1.65;}
+.gate-input{
+  width:100%;padding:11px 14px;border:1.5px solid #dedad0;border-radius:8px;
+  font-size:15px;color:#18152e;background:#f8f6f1;outline:none;
+  font-family:'DM Mono',monospace;text-align:center;letter-spacing:4px;
+  transition:border-color .15s,box-shadow .15s;margin-bottom:14px;
+}
+.gate-input:focus{border-color:#0d1b8e;box-shadow:0 0 0 3px rgba(13,27,142,.10);}
+.gate-input::placeholder{letter-spacing:1px;font-size:12.5px;font-family:'DM Sans',sans-serif;}
+.gate-btn{
+  width:100%;padding:12px;border:none;border-radius:8px;
+  background:linear-gradient(135deg,#0a1470 0%,#0d1b8e 55%,#162099 100%);
+  color:#fff;font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;
+  cursor:pointer;transition:transform .15s,box-shadow .15s;
+  position:relative;overflow:hidden;
+}
+.gate-btn::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;
+  background:#c9a227;transform:scaleX(0);transition:transform .3s;}
+.gate-btn:hover::after{transform:scaleX(1);}
+.gate-btn:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(13,27,142,.32);}
+.gate-btn:active{transform:none;}
+.gate-err{font-size:12px;color:#dc2626;margin-top:10px;min-height:16px;}
+
 .lang-btn{
   padding:4px 11px;border-radius:6px;
   background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.22);
@@ -417,6 +466,20 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 </head>
 <body>
 
+<!-- GATE -->
+<div id="gate">
+  <div class="gate-card">
+    <div class="gate-stripe"></div>
+    <div class="gate-logo">ESGCI</div>
+    <div class="gate-sub">Générateur d'Attestations d'Inscription<br><span style="color:#9b98b8;font-size:10.5px">Accès restreint — Scolarité ESGCI</span></div>
+    <input id="gateInput" class="gate-input" type="password" placeholder="Mot de passe"
+           autocomplete="current-password"
+           onkeydown="if(event.key==='Enter')gateSubmit()">
+    <button class="gate-btn" onclick="gateSubmit()">Connexion</button>
+    <div id="gateErr" class="gate-err"></div>
+  </div>
+</div>
+
 <!-- HEADER -->
 <header class="hdr">
   <div class="hdr-brand">
@@ -626,6 +689,8 @@ const i18n = {
     'toast.error':         '⚠ Erreur lors de la génération',
     'toast.redl':          '✔ PDF retéléchargé',
     'toast.dl.suffix':     'téléchargé',
+    'gate.error':          'Mot de passe incorrect',
+    'gate.btn':            'Connexion',
   },
   en: {
     'app.subtitle':        'Enrollment Certificate Generator',
@@ -663,6 +728,8 @@ const i18n = {
     'toast.error':         '⚠ Error during generation',
     'toast.redl':          '✔ PDF re-downloaded',
     'toast.dl.suffix':     'downloaded',
+    'gate.error':          'Incorrect password',
+    'gate.btn':            'Login',
   }
 };
 
@@ -677,6 +744,8 @@ function applyLang(){
   document.getElementById('nom').placeholder         = t('ph.nom');
   document.getElementById('prenom').placeholder      = t('ph.prenom');
   document.getElementById('langBtn').textContent     = uiLang === 'fr' ? 'EN' : 'FR';
+  const gateBtn = document.querySelector('.gate-btn');
+  if(gateBtn) gateBtn.textContent = t('gate.btn');
   const emptyEl = document.querySelector('#certContent .empty-txt');
   if(emptyEl) emptyEl.innerHTML = t('empty.init');
 }
@@ -1091,6 +1160,30 @@ function showToast(msg){
   const t=document.getElementById('toast');
   t.textContent=msg;t.classList.add('show');
   clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+/* ── GATE ── */
+(function(){
+  if(sessionStorage.getItem('esgci_auth')==='1'){
+    const g=document.getElementById('gate');
+    if(g) g.style.display='none';
+  }
+})();
+
+function gateSubmit(){
+  const val=document.getElementById('gateInput').value;
+  if(btoa(unescape(encodeURIComponent(val)))==='Sm9zcGlu'){
+    sessionStorage.setItem('esgci_auth','1');
+    const gate=document.getElementById('gate');
+    gate.classList.add('out');
+    setTimeout(()=>gate.remove(),380);
+  }else{
+    const err=document.getElementById('gateErr');
+    err.textContent=t('gate.error');
+    document.getElementById('gateInput').value='';
+    document.getElementById('gateInput').focus();
+    setTimeout(()=>err.textContent='',2500);
+  }
 }
 
 /* ── INIT ── */
